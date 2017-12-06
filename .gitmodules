@@ -1,0 +1,3 @@
+[submodule "themes/freemind.386"]
+	path = themes/freemind.386
+	url = git@github.com:xlzd/hexo-theme-freemind.386.git
