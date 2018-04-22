@@ -75,6 +75,8 @@ pagination_dir: page
 # theme: next
 theme: freemind.386
 
+disqus_shortname: xlzd
+
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
