@@ -70,4 +70,6 @@ Select the appropriate number [1-2] then [enter] (press 'c' to cancel): 1
 35 2 * * 1 /usr/bin/nginx -s reload
 ```
 
+下次再要加新域名的时候，只需继续执行 `sudo certbot --nginx -d domain.com` 就可以啦~
+
 Done.
