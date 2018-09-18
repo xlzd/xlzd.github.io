@@ -4,7 +4,7 @@ date: 2018-09-18 00:43:55
 tags: Golang
 ---
 
-前几天一个小伙伴在公司 slack 问到如下 Golang 代码会卡死（[Go Playground](https://play.golang.org/p/nxo4D832JCo)）：
+前几天一个小伙伴在公司 slack 问到如下 Golang 代码为什么会卡死（[Go Playground](https://play.golang.org/p/nxo4D832JCo)）：
 
 ```go
 package main
