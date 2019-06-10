@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html class="theme-next pisces" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.4.1" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/avatar.png?v=6.4.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/avatar.png?v=6.4.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/avatar.png?v=6.4.1">
+
+
+  <link rel="mask-icon" href="/images/avatar.png?v=6.4.1" color="#222">
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '6.4.1',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="字典（dict）是 Redis 实现中非常常用的数据结构，比如用来作为 set 和 hash 的底层实现之一，dict 也是 Redis 数据库中 redisDb 用来存储所有数据的基本格式。 dict 的实现dictht(hash table) &amp;amp; dictEntryRedis 中 dict 结构其实封装了 hash table（ Redis 中叫做 dictht ），如下是 Redis">
+<meta name="keywords" content="Redis,data-structure">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis dict rehash">
+<meta property="og:url" content="https://xlzd.me/2018/09/04/redis-dict-rehash/index.html">
+<meta property="og:site_name" content="xlzd 杂谈">
+<meta property="og:description" content="字典（dict）是 Redis 实现中非常常用的数据结构，比如用来作为 set 和 hash 的底层实现之一，dict 也是 Redis 数据库中 redisDb 用来存储所有数据的基本格式。 dict 的实现dictht(hash table) &amp;amp; dictEntryRedis 中 dict 结构其实封装了 hash table（ Redis 中叫做 dictht ），如下是 Redis">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-05-14T06:33:49.582Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Redis dict rehash">
+<meta name="twitter:description" content="字典（dict）是 Redis 实现中非常常用的数据结构，比如用来作为 set 和 hash 的底层实现之一，dict 也是 Redis 数据库中 redisDb 用来存储所有数据的基本格式。 dict 的实现dictht(hash table) &amp;amp; dictEntryRedis 中 dict 结构其实封装了 hash table（ Redis 中叫做 dictht ），如下是 Redis">
+
+
+
+  <link rel="alternate" href="/atom.xml" title="xlzd 杂谈" type="application/atom+xml">
+
+
+
+
+  <link rel="canonical" href="https://xlzd.me/2018/09/04/redis-dict-rehash/">
+
+
+
+<script type="text/javascript" id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Redis dict rehash | xlzd 杂谈</title>
+  
+
+
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-65835112-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-65835112-1');
+</script>
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?70df08067fbb3792c8ee0bc6eb269fd8";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style type="text/css">
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion {
+      .logo-line-before i { left: initial; }
+      .logo-line-after i { right: initial; }
+    }
+  </style>
+</noscript>
+
+
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-2933033769298120",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">xlzd 杂谈</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <h1 class="site-subtitle" itemprop="description">blog of xlzd</h1>
+      
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+    <a href="/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+    <a href="/archives/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+    <a href="/tags/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+    <a href="/about/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+  
+  
+  
+    
+      
+    
+    <a href="https://github.com/xlzd" class="github-corner" target="_blank" title="Follow me on GitHub" aria-label="Follow me on GitHub"><svg width="80" height="80" viewbox="0 0 250 250" style="fill:#222; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg>
+    
+      </a>
+    
+
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://xlzd.me/2018/09/04/redis-dict-rehash/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="xlzd">
+      <meta itemprop="description" content="blog of xlzd">
+      <meta itemprop="image" content="/images/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xlzd 杂谈">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Redis dict rehash
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-09-04 20:06:29" itemprop="dateCreated datePublished" datetime="2018-09-04T20:06:29+08:00">2018-09-04</time>
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>字典（<code>dict</code>）是 Redis 实现中非常常用的数据结构，比如用来作为 set 和 hash 的底层实现之一，dict 也是 Redis 数据库中 redisDb 用来存储所有数据的基本格式。</p>
+<h2 id="dict-的实现"><a href="#dict-的实现" class="headerlink" title="dict 的实现"></a>dict 的实现</h2><h3 id="dictht-hash-table-amp-dictEntry"><a href="#dictht-hash-table-amp-dictEntry" class="headerlink" title="dictht(hash table) &amp; dictEntry"></a>dictht(hash table) &amp; dictEntry</h3><p>Redis 中 dict 结构其实封装了 hash table（ Redis 中叫做 dictht ），如下是 Redis4.0 中，<a href="https://github.com/antirez/redis/blob/4.0/src/dict.h#L69-74" target="_blank" rel="noopener">dictht 的定义</a>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dictht</span> &#123;</span></span><br><span class="line">    dictEntry **table;      <span class="comment">// hash table 实际存储的位置 </span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> size;     <span class="comment">// table 的大小</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> sizemask;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> used;     <span class="comment">// 已经使用的长度</span></span><br><span class="line">&#125; dictht;</span><br></pre></td></tr></table></figure>
+<p>如上，table 属性指向一个 <code>dictEntry</code> 指针数组的开始位置，（其实就是 <code>dictEntry</code> 指针数组）用来存储每一组键值对。size 则记录 table 的长度，used 用来记录已经存储的节点数量。</p>
+<p>如下是 <a href="https://github.com/antirez/redis/blob/4.0/src/dict.h#L47-56" target="_blank" rel="noopener">dictEntry 的定义</a>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dictEntry</span> &#123;</span></span><br><span class="line">    <span class="keyword">void</span> *key;</span><br><span class="line">    <span class="keyword">union</span> &#123;</span><br><span class="line">        <span class="keyword">void</span> *val;</span><br><span class="line">        <span class="keyword">uint64_t</span> u64;</span><br><span class="line">        <span class="keyword">int64_t</span> s64;</span><br><span class="line">        <span class="keyword">double</span> d;</span><br><span class="line">    &#125; v;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">dictEntry</span> *<span class="title">next</span>;</span></span><br><span class="line">&#125; dictEntry;</span><br></pre></td></tr></table></figure>
+<p>如上，key 则是一个键值对的键，v 是对应的值。每个 dictEntry 除了存储键值之外，还有一个 next 指针，用来指向 hash 相同时的下一个节点，以解决 hash 冲突问题。</p>
+<p>如下图，假如 k1/k2 对应的 hash 相同，则会通过 next 指针连接起来：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">+----------+</span><br><span class="line">|  dictht  |</span><br><span class="line">+----------+    +----------+</span><br><span class="line">|  table   +---&gt;| dictEntry|</span><br><span class="line">|          |    +----------+</span><br><span class="line">|  size    |    |    0     +-&gt;NULL  +---------+      +---------+</span><br><span class="line">|          |    +----------+        |  entry  | next |  entry  | next</span><br><span class="line">|  sizemask|    |    1     +-------&gt;+---------+-----&gt;+---------+-----&gt;NULL</span><br><span class="line">|          |    +----------+        | k1 | v1 |      | k2 | v2 |</span><br><span class="line">|  used    |    |    2     +-&gt;NULL  +---------+      +---------+</span><br><span class="line">+----------+    +----------+</span><br><span class="line">                |    3     +-&gt;NULL</span><br><span class="line">                +----------+</span><br></pre></td></tr></table></figure>
+<h3 id="dict"><a href="#dict" class="headerlink" title="dict"></a>dict</h3><p>Redis4.0 中 <a href="https://github.com/antirez/redis/blob/4.0/src/dict.h#L76-82" target="_blank" rel="noopener">dict 的定义</a>如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dictType</span> &#123;</span></span><br><span class="line">    <span class="comment">// 计算哈希值</span></span><br><span class="line">    <span class="keyword">uint64_t</span> (*hashFunction)(<span class="keyword">const</span> <span class="keyword">void</span> *key);</span><br><span class="line">    <span class="comment">// 复制 key</span></span><br><span class="line">    <span class="keyword">void</span> *(*keyDup)(<span class="keyword">void</span> *privdata, <span class="keyword">const</span> <span class="keyword">void</span> *key);</span><br><span class="line">    <span class="comment">// 复制 value</span></span><br><span class="line">    <span class="keyword">void</span> *(*valDup)(<span class="keyword">void</span> *privdata, <span class="keyword">const</span> <span class="keyword">void</span> *obj);</span><br><span class="line">    <span class="comment">// 比较 key</span></span><br><span class="line">    <span class="keyword">int</span> (*keyCompare)(<span class="keyword">void</span> *privdata, <span class="keyword">const</span> <span class="keyword">void</span> *key1, <span class="keyword">const</span> <span class="keyword">void</span> *key2);</span><br><span class="line">    <span class="comment">// 销毁 key</span></span><br><span class="line">    <span class="keyword">void</span> (*keyDestructor)(<span class="keyword">void</span> *privdata, <span class="keyword">void</span> *key);</span><br><span class="line">    <span class="comment">// 销毁 value</span></span><br><span class="line">    <span class="keyword">void</span> (*valDestructor)(<span class="keyword">void</span> *privdata, <span class="keyword">void</span> *obj);</span><br><span class="line">&#125; dictType;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dict</span> &#123;</span></span><br><span class="line">    dictType *type;</span><br><span class="line">    <span class="keyword">void</span> *privdata;</span><br><span class="line">    dictht ht[<span class="number">2</span>];</span><br><span class="line">    <span class="keyword">long</span> rehashidx; <span class="comment">/* rehashing not in progress if rehashidx == -1 */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> iterators; <span class="comment">/* number of iterators currently running */</span></span><br><span class="line">&#125; dict;</span><br></pre></td></tr></table></figure>
+<p>先看一下 dictType，由于 dictEntry 中的 key 是 <code>void*</code>，v 也可以是 <code>void*</code>，所以需要某种方式来操作具体的键和值。dictType 就定义了一组函数指针，dict 对象的 type 指针关联本 dict 对应的 key-value pair 实现的 dictType，以实现具体类型的计算哈希、复制键值、比较和销毁键值等操作。dict 通过这样的方式实现了多态。</p>
+<p>dict 结构体中，prevdata 保存了需要传给 dictType 里的函数的特定参数（dictType 中各个函数签名中的 prevdata 指针）。</p>
+<p>ht 是包含两个 dictht 对象的数组，ht[0] 存储数据，ht[1] 在 rehash 的时候会用到，下面就会提到。</p>
+<p>rehashidx 记录 rehash 进度，本文后面会详细介绍。</p>
+<p>在没有发生 rehash 的时候，ht[1] 是一个空的 dictht。</p>
+<h2 id="hash-冲突"><a href="#hash-冲突" class="headerlink" title="hash 冲突"></a>hash 冲突</h2><p>所谓 hash table，本质是将 hash(key) 映射到自己的 table 数组中去。<br>对于一个 dict 对象，一个 dictEntry 经过下面的计算即可知道需要被映射到哪个位置：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hash = dict-&gt;type-&gt;hashFunction(dictEntry-&gt;key);</span><br><span class="line">position = hash &amp; dict-&gt;ht[<span class="number">0</span>].sizemask;</span><br></pre></td></tr></table></figure></p>
+<p>想象这样的情况，如果两个 key 的哈希值相同，或者哈希值 &amp; sizemask 相同，即两个不同的 key 被映射到 dictht.table 的同一个位置，也就是发生了 hash 冲突。</p>
+<p>如上 dictEntry 结构中的 next 指针，Redis 通过这个指针将 hash 冲突的 dictEntry 连接到一起，以解决冲突。</p>
+<p>由于 dictEntry 只有 next 指针，所以处于性能考虑，当 dictht 遇到 hash 冲突时，新的节点总是会被添加到这个链表的表头节点，也就是只需要 O(1) 时间复杂度。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">before: 包含 k1-v1 的 dictht：</span><br><span class="line">+----------+</span><br><span class="line">|  dictht  |</span><br><span class="line">+----------+    +----------+</span><br><span class="line">|  table   +---&gt;| dictEntry|</span><br><span class="line">|          |    +----------+</span><br><span class="line">|  size    |    |    0     +-&gt;NULL  +---------+ </span><br><span class="line">|          |    +----------+        |  entry  |  </span><br><span class="line">|  sizemask|    |    1     +-------&gt;+---------+ </span><br><span class="line">|          |    +----------+        | k1 | v1 | </span><br><span class="line">|  used    |    |    2     +-&gt;NULL  +---------+ </span><br><span class="line">+----------+    +----------+</span><br><span class="line">                |    3     +-&gt;NULL</span><br><span class="line">                +----------+</span><br><span class="line"></span><br><span class="line">after: 当 k2 与 k1 的 hash 冲突时，k2 会被插入到链表表头节点：</span><br><span class="line">+----------+</span><br><span class="line">|  dictht  |</span><br><span class="line">+----------+    +----------+</span><br><span class="line">|  table   +---&gt;| dictEntry|</span><br><span class="line">|          |    +----------+</span><br><span class="line">|  size    |    |    0     +-&gt;NULL  +---------+      +---------+</span><br><span class="line">|          |    +----------+        |  entry  | next |  entry  | next</span><br><span class="line">|  sizemask|    |    1     +-------&gt;+---------+-----&gt;+---------+-----&gt;NULL</span><br><span class="line">|          |    +----------+        | k2 | v2 |      | k1 | v1 |</span><br><span class="line">|  used    |    |    2     +-&gt;NULL  +---------+      +---------+</span><br><span class="line">+----------+    +----------+</span><br><span class="line">                |    3     +-&gt;NULL</span><br><span class="line">                +----------+</span><br></pre></td></tr></table></figure>
+<h2 id="rehash-过程"><a href="#rehash-过程" class="headerlink" title="rehash 过程"></a>rehash 过程</h2><p>当 dictEntry 被不断插入到 dictht 中或不断被删除时，dictht 对象的 table size 对于当前存储元素个数来讲可能太小或者太大。<br>衡量所谓「太大」和「太小」的标准，叫做<strong>负载因子（ load factor ）</strong>，这个值的计算规则为：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">loadFactor = dictht.used / dictht.size</span><br></pre></td></tr></table></figure>
+<p>比如对于上面的例子，负载因子就是 2 / 4 = 0.5。</p>
+<p>当：</p>
+<ol>
+<li>服务器执行 BGSAVE/BGREWRITEAOF 命令且负载因子大于 5 时，Redis 会对 dictht 扩容；</li>
+<li>服务器没有执行 BGSAVE/BGREWRITEAOF 命令且负载因子大于 1 时，Redis 会对 dictht 扩容；</li>
+<li>负载因子小于 0.1 时，Redis 会对 dictht 缩容。</li>
+</ol>
+<p>当满足这些条件时，将出发 Redis rehash 操作，具体步骤为：</p>
+<ol>
+<li>为 dict-&gt;ht[1] 分配空间，具体大小取决于目前是要扩容还是缩容，以及 ht[0].used（当前 dict 大小）：<br> a. 当扩容时，新的大小为第一个大于 ht[0].used * 2 的 2^n 值；<br> b. 当缩容时，新的大小为第一个 ≥ ht[0].used 的 2^n 值。</li>
+<li>将 ht[0].table 中所有的键值对依次 rehash 到 ht[1].table 中去，即依次为每个 dictEntry 计算 key 的 hash，并映射到新的 dictht.table 中。</li>
+<li>当 ht[0].table 所有 dictEntry 全部迁移到 ht[1].table 里之后，释放 ht[0]，并将 ht[1] 设置为 ht[0]，然后再在 ht[1] 创建空的 dictht。</li>
+</ol>
+<h2 id="渐进式-rehash"><a href="#渐进式-rehash" class="headerlink" title="渐进式 rehash"></a>渐进式 rehash</h2><p>当 dict rehash 发生时，需要将 ht[0] 中所有 dictEntry 全部 rehash 到 ht[1] 中去。想象一下如果 dict 已经非常大时，这个操作将会非常慢，以至于影响 Redis 对外提供服务的性能。<br>所以在 Redis rehash 过程的实现中，这个过程并不是停机一次性完成的，而是会分多次进行，渐进式完成的。上面提到的 dict-&gt;rehashidx 属性，就是用来记录 rehash 流程的。</p>
+<p>这个渐进式 rehash 大概的流程如下：</p>
+<ol>
+<li>为 dict-&gt;ht[1] 分配合适的空间，dict 此时同时持有 ht[0] 和 ht[1]；</li>
+<li>将 dict-&gt;rehashidx 设置为 0，代表 rehash 工作开始；</li>
+<li>当 rehash 期间，对 dict 执行的增、删、改、查操作时，Redis 除了执行操作外，还会将 dict-&gt;ht[0].table[dict-&gt;rehashidx] 上的 dictEntry rehash 到 dict-&gt;ht[1] 中，并将 rehashidx 加一；</li>
+<li>随着 dict rehash 不断进行，最终，dict-&gt;ht[0] 上的所有元素都被 rehash 至 dict-&gt;ht[1] 中，rehash 过程完成，将 rehashidx 置为 -1;</li>
+<li>释放 ht[0]，并将 ht[1] 设置为 ht[0]，然后再在 ht[1] 创建空的 dictht。</li>
+</ol>
+<p>在 rehash 过程中，如果有新的元素插入，则会直接被插入到 dict-&gt;ht[1] 中去，ht[0] 将不会再插入数据。<br>而这个过程中，dict-&gt;ht[0]、ht[1] 都有部分数据，因此在 rehash 进行时，dict 的查找、删除、更新都会在两个 dictht 对象上执行。比如删除一个 key，如果这个 key 在 dict-&gt;ht[0] 中不存在，还会再在 dict-&gt;ht[1] 中查找并删除（如果存在）。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>回顾了一下 Redis 中 dict 的实现，当遇到 hash 冲突时的解决办法，以及 Redis 中 dict 是如何扩容和缩容的。</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Redis/" rel="tag"># Redis</a>
+          
+            <a href="/tags/data-structure/" rel="tag"># data-structure</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/09/01/redis-data-structure-overview/" rel="next" title="Redis data structure overview">
+                <i class="fa fa-chevron-left"></i> Redis data structure overview
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/09/14/why-mysql-innodb-need-auto-increment-primary-key/" rel="prev" title="为什么建议 MySQL InnonDB 的表使用递增的主键 ID">
+                为什么建议 MySQL InnonDB 的表使用递增的主键 ID <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/avatar.png" alt="xlzd">
+            
+              <p class="site-author-name" itemprop="name">xlzd</p>
+              <p class="site-description motion-element" itemprop="description">blog of xlzd</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">27</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">13</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/xlzd" target="_blank" title="GitHub" rel="external nofollow"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                  
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="https://www.zhihu.com/people/xlzd" target="_blank" title="知乎" rel="external nofollow"><i class="fa fa-fw fa-globe"></i>知乎</a>
+                  
+                </span>
+              
+            </div>
+          
+
+          
+          
+            <div class="cc-license motion-element" itemprop="license">
+              <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" target="_blank" rel="external nofollow">
+                <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons">
+              </a>
+            </div>
+          
+
+          
+          
+
+          
+          <div class="motion-element">
+            <script type="text/javascript" src="//ra.revolvermaps.com/0/0/6.js?i=0q7scpwe1yy&amp;m=0&amp;c=ff0000&amp;cr1=ffffff&amp;f=lucida_console&amp;l=0" async="async"></script>
+          </div>
+          
+
+          
+            
+          
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#dict-的实现"><span class="nav-number">1.</span> <span class="nav-text">dict 的实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#dictht-hash-table-amp-dictEntry"><span class="nav-number">1.1.</span> <span class="nav-text">dictht(hash table) &amp; dictEntry</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#dict"><span class="nav-number">1.2.</span> <span class="nav-text">dict</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#hash-冲突"><span class="nav-number">2.</span> <span class="nav-text">hash 冲突</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rehash-过程"><span class="nav-number">3.</span> <span class="nav-text">rehash 过程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#渐进式-rehash"><span class="nav-number">4.</span> <span class="nav-text">渐进式 rehash</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 1926 – <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">xlzd</span>
+
+  
+
+  
+</div>
+
+
+  
+
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" rel="external nofollow" href="https://hexo.io">Hexo</a> </div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme – <a class="theme-link" target="_blank" rel="external nofollow" href="https://theme-next.org">NexT.Pisces</a></div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+	
+    
+
+    
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=6.4.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=6.4.1"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=6.4.1"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=6.4.1"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.4.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=6.4.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=6.4.1"></script>
+
+
+
+  
+
+  
+
+  
+    <script type="text/javascript">
+      var disqus_config = function () {
+        this.page.url = 'https://xlzd.me/2018/09/04/redis-dict-rehash/';
+        this.page.identifier = '2018/09/04/redis-dict-rehash/';
+        this.page.title = 'Redis dict rehash';
+        };
+      function loadComments () {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://xlzd.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      }
+      
+        loadComments();
+      
+    </script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

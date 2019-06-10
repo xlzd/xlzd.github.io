@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html class="theme-next pisces" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.4.1" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/avatar.png?v=6.4.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/avatar.png?v=6.4.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/avatar.png?v=6.4.1">
+
+
+  <link rel="mask-icon" href="/images/avatar.png?v=6.4.1" color="#222">
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '6.4.1',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="在Python尤其是Python2中，编码问题是困扰开发者尤其初学者的一大问题。什么Unicode/UTF-8/str，又是decode/encode的，搞得人头都大了。其实不然，这有点类似Java中java.io包一样，看似庞大难懂，但是可以非常精细地定制需求。">
+<meta name="keywords" content="Python">
+<meta property="og:type" content="article">
+<meta property="og:title" content="聊一聊 Python2 的编码">
+<meta property="og:url" content="https://xlzd.me/2016/03/01/python2-encoding/index.html">
+<meta property="og:site_name" content="xlzd 杂谈">
+<meta property="og:description" content="在Python尤其是Python2中，编码问题是困扰开发者尤其初学者的一大问题。什么Unicode/UTF-8/str，又是decode/encode的，搞得人头都大了。其实不然，这有点类似Java中java.io包一样，看似庞大难懂，但是可以非常精细地定制需求。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/2376400891.png">
+<meta property="og:image" content="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/1834500880.png">
+<meta property="og:image" content="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/2334385338.png">
+<meta property="og:image" content="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/1172641431.png">
+<meta property="og:image" content="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/3684536351.png">
+<meta property="og:image" content="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/2284577373.png">
+<meta property="og:image" content="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/3632468920.png">
+<meta property="og:image" content="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/1009013095.png">
+<meta property="og:updated_time" content="2019-05-14T06:33:49.581Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="聊一聊 Python2 的编码">
+<meta name="twitter:description" content="在Python尤其是Python2中，编码问题是困扰开发者尤其初学者的一大问题。什么Unicode/UTF-8/str，又是decode/encode的，搞得人头都大了。其实不然，这有点类似Java中java.io包一样，看似庞大难懂，但是可以非常精细地定制需求。">
+<meta name="twitter:image" content="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/2376400891.png">
+
+
+
+  <link rel="alternate" href="/atom.xml" title="xlzd 杂谈" type="application/atom+xml">
+
+
+
+
+  <link rel="canonical" href="https://xlzd.me/2016/03/01/python2-encoding/">
+
+
+
+<script type="text/javascript" id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>聊一聊 Python2 的编码 | xlzd 杂谈</title>
+  
+
+
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-65835112-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-65835112-1');
+</script>
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?70df08067fbb3792c8ee0bc6eb269fd8";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style type="text/css">
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion {
+      .logo-line-before i { left: initial; }
+      .logo-line-after i { right: initial; }
+    }
+  </style>
+</noscript>
+
+
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-2933033769298120",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">xlzd 杂谈</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <h1 class="site-subtitle" itemprop="description">blog of xlzd</h1>
+      
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+    <a href="/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+    <a href="/archives/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+    <a href="/tags/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+    <a href="/about/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+  
+  
+  
+    
+      
+    
+    <a href="https://github.com/xlzd" class="github-corner" target="_blank" title="Follow me on GitHub" aria-label="Follow me on GitHub"><svg width="80" height="80" viewbox="0 0 250 250" style="fill:#222; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg>
+    
+      </a>
+    
+
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://xlzd.me/2016/03/01/python2-encoding/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="xlzd">
+      <meta itemprop="description" content="blog of xlzd">
+      <meta itemprop="image" content="/images/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xlzd 杂谈">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">聊一聊 Python2 的编码
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2016-03-01 19:06:00" itemprop="dateCreated datePublished" datetime="2016-03-01T19:06:00+08:00">2016-03-01</time>
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在Python尤其是Python2中，编码问题是困扰开发者尤其初学者的一大问题。什么Unicode/UTF-8/str，又是decode/encode的，搞得人头都大了。其实不然，这有点类似Java中java.io包一样，看似庞大难懂，但是可以非常精细地定制需求。</p>
+<p><img src="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/2376400891.png" alt="屏幕快照 2016-03-01 16.30.04.png"></p>
+<a id="more"></a>
+<h3 id="编码"><a href="#编码" class="headerlink" title="编码"></a>编码</h3><p>计算机只可以存储和处理二进制数据，所以从文字到计算机可以识别的二进制之间需要一道对应关系。于是便有了ASCII（American Standard Code for Information Interchange，美国标准信息交换代码），ASCII使用7位二进制数标记了128(2**7)字符（符号、字母、控制符等），由于1byte=8bit，所以干脆最高位补个0，凑够8位以方便计算和处理。</p>
+<p>接着，拉丁语系的技术宅们发现，这128个字符的高位空着的，那么干脆用来表示拉丁语系的主要符号吧，还是使用单字节，但是可以表示的字符数量增加了一倍。这套编码叫做latin-1(iso-8859-1)。</p>
+<p>这些宅男们没有想到，区区一个字节256个符号，对于东亚国家来讲，简直呵呵了。拿中文为例，仅常用字符就几千个，于是中国国家标准总局制定了一套中文编码——GB2312。GB2312通过两个字节表示一个汉字，且最高位为0的部分兼容ASCII，最高位为1的部分则通过连续的两个字节表示一个中文字。后来又出现了兼容GB2312的GBK编码。</p>
+<p>到这里，依然面临了一个问题：GB2312或者GBK编码中，仅可以表示汉字和英文字符，无法做到多语言文字同时表示。这时候，Unicode(又称万国码)出现了。Unicode采用32位二进制(4字节)表示一个字符，这样便可以一套编码对应多种不同语言。Unicode是一种编码，它的作用是指定字符到二进制数之间的对应关系。但是对于存储和传输，Unicode有几种不同的实现，比较常用的是UTF-8、UTF-16、UTF-32。UTF-32中，每个字符固定占4字节，按照Unicode编码完全映射。而UTF-8和UTF-16则属于变长编码，分别使用最少1个(UTF-8)或2个(UTF-16)字节到最多4个字节来编码。</p>
+<h3 id="Python源码的编码"><a href="#Python源码的编码" class="headerlink" title="Python源码的编码"></a>Python源码的编码</h3><p>Python2中，如果在源码首行(或在指定sha-bang时的第二行)不显式指定编码，则无法在源码中出现非ASCII字符。这是由于Python解释器默认将源码认作ASCII编码格式。PEP263(<a href="https://www.python.org/dev/peps/pep-0263/" target="_blank" rel="noopener">点击这里查看</a>)中约定，可以通过如下方式之一来声明源码的编码格式：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># coding=&lt;coding name&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># or</span></span><br><span class="line"><span class="comment"># -*- coding: &lt;encoding name&gt; -*-</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># or</span></span><br><span class="line"><span class="comment"># vim: set fileencoding=&lt;encoding name&gt; :</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="Python中的编码"><a href="#Python中的编码" class="headerlink" title="Python中的编码"></a>Python中的编码</h3><p>Python中有两个常用的由<code>basestring</code>派生出来的表示字符串的类型：<code>str</code>,<code>unicode</code>。其中，<code>str</code>类似于C中的字符数组或者Java中的byte数组，事实上你可以将它理解为一个存储二进制内容的容器，<code>str</code>不存储编码信息，如果对<code>str</code>类型的字符串迭代的话，则会按照其在内存中的字节序依次迭代，意味着如果这个字符串存储的是多字节字符（Unicode/GBK等），则会截断这个字符，演示如下：</p>
+<p><img src="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/1834500880.png" alt="屏幕快照 2016-03-01 16.15.08.png"></p>
+<p>而对于<code>unicode</code>类型，Python在内存中存储和使用的时候是按照UTF-8格式，在代码中的表示为字符串前加<code>u</code>，如：</p>
+<p><img src="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/2334385338.png" alt="屏幕快照 2016-03-01 16.23.18.png"></p>
+<p>而<code>unicode</code>与<code>str</code>之间的转换，则用到了<code>encode</code>和<code>deocde</code>方法。decode表示将一个(<code>str</code>)字符串按照给定的编码解析为<code>unicode</code>类型，encode则表示将一个<code>unicode</code>字符串按照指定编码解析为字节数组(<code>str</code>)：</p>
+<p><img src="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/1172641431.png" alt="屏幕快照 2016-03-01 16.26.11.png"></p>
+<p><img src="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/3684536351.png" alt="屏幕快照 2016-03-01 16.30.04.png"></p>
+<h3 id="文件读写"><a href="#文件读写" class="headerlink" title="文件读写"></a>文件读写</h3><p>内置的open函数打开文件时，read方法读取的是一个str(私以为叫做字节数组更合适)，如果读取的是其它编码的文字，则需要decode之后再做使用。</p>
+<p><img src="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/2284577373.png" alt="屏幕快照 2016-03-01 16.54.33.png"></p>
+<p>对于使用open函数打开文件之后的写操作（多字节编码的字符串），则需要将需要写入的字符串按照其编码encode为一个str，如果直接写入，则会引发如下错误（如果在代码中加入了encoding声明，则会按照声明的编码格式encode后写入）：</p>
+<p><img src="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/3632468920.png" alt="屏幕快照 2016-03-01 16.56.06.png"></p>
+<p>除此以外，codecs模块也提供了一个open函数，可以直接指定好编码打开一个文本文件，那么读取到的文件内容则直接是一个unicode字符串。对应的指定编码后的写入文件，则可以直接将unicode写到文件中。通过codecs.open可以避免很多编码问题：</p>
+<p><img src="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/01/1009013095.png" alt="屏幕快照 2016-03-01 17.02.53.png"></p>
+<h3 id="建议"><a href="#建议" class="headerlink" title="建议"></a>建议</h3><p>对于Python代码中避免遇到编码问题，有一些小建议：</p>
+<ul>
+<li>字符编码声明：在代码开头声明编码格式</li>
+<li>使用codecs的open函数处理文本文件</li>
+<li>尽可能使用unicode而不是str：在所有字符串的引号前加<code>u</code></li>
+</ul>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Python/" rel="tag"># Python</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/01/01/python-requests/" rel="next" title="Python requests库介绍">
+                <i class="fa fa-chevron-left"></i> Python requests库介绍
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/03/05/lagou/" rel="prev" title="从拉勾招聘看互联网行业">
+                从拉勾招聘看互联网行业 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/avatar.png" alt="xlzd">
+            
+              <p class="site-author-name" itemprop="name">xlzd</p>
+              <p class="site-description motion-element" itemprop="description">blog of xlzd</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">27</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">13</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/xlzd" target="_blank" title="GitHub" rel="external nofollow"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                  
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="https://www.zhihu.com/people/xlzd" target="_blank" title="知乎" rel="external nofollow"><i class="fa fa-fw fa-globe"></i>知乎</a>
+                  
+                </span>
+              
+            </div>
+          
+
+          
+          
+            <div class="cc-license motion-element" itemprop="license">
+              <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" target="_blank" rel="external nofollow">
+                <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons">
+              </a>
+            </div>
+          
+
+          
+          
+
+          
+          <div class="motion-element">
+            <script type="text/javascript" src="//ra.revolvermaps.com/0/0/6.js?i=0q7scpwe1yy&amp;m=0&amp;c=ff0000&amp;cr1=ffffff&amp;f=lucida_console&amp;l=0" async="async"></script>
+          </div>
+          
+
+          
+            
+          
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#编码"><span class="nav-number">1.</span> <span class="nav-text">编码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Python源码的编码"><span class="nav-number">2.</span> <span class="nav-text">Python源码的编码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Python中的编码"><span class="nav-number">3.</span> <span class="nav-text">Python中的编码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#文件读写"><span class="nav-number">4.</span> <span class="nav-text">文件读写</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#建议"><span class="nav-number">5.</span> <span class="nav-text">建议</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 1926 – <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">xlzd</span>
+
+  
+
+  
+</div>
+
+
+  
+
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" rel="external nofollow" href="https://hexo.io">Hexo</a> </div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme – <a class="theme-link" target="_blank" rel="external nofollow" href="https://theme-next.org">NexT.Pisces</a></div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+	
+    
+
+    
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=6.4.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=6.4.1"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=6.4.1"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=6.4.1"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.4.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=6.4.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=6.4.1"></script>
+
+
+
+  
+
+  
+
+  
+    <script type="text/javascript">
+      var disqus_config = function () {
+        this.page.url = 'https://xlzd.me/2016/03/01/python2-encoding/';
+        this.page.identifier = '2016/03/01/python2-encoding/';
+        this.page.title = '聊一聊 Python2 的编码';
+        };
+      function loadComments () {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://xlzd.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      }
+      
+        loadComments();
+      
+    </script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

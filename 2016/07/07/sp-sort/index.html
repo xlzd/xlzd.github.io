@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html class="theme-next pisces" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.4.1" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/avatar.png?v=6.4.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/avatar.png?v=6.4.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/avatar.png?v=6.4.1">
+
+
+  <link rel="mask-icon" href="/images/avatar.png?v=6.4.1" color="#222">
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '6.4.1',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="常见的排序算法——诸如快排、堆排或归并等——都是基于比较的，除了这种正统意义上的排序算法，最近了解了几种令人啼笑皆非的排序算法，与大家分享一下。虽然这些算法都基本不可能用到生产环境，不过，平时拿出来恶搞一下还是比较有意思的。">
+<meta name="keywords" content="nonsense">
+<meta property="og:type" content="article">
+<meta property="og:title" content="几种无用但有趣的排序算法">
+<meta property="og:url" content="https://xlzd.me/2016/07/07/sp-sort/index.html">
+<meta property="og:site_name" content="xlzd 杂谈">
+<meta property="og:description" content="常见的排序算法——诸如快排、堆排或归并等——都是基于比较的，除了这种正统意义上的排序算法，最近了解了几种令人啼笑皆非的排序算法，与大家分享一下。虽然这些算法都基本不可能用到生产环境，不过，平时拿出来恶搞一下还是比较有意思的。">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/14/476167382.png">
+<meta property="og:updated_time" content="2019-05-14T06:33:49.583Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="几种无用但有趣的排序算法">
+<meta name="twitter:description" content="常见的排序算法——诸如快排、堆排或归并等——都是基于比较的，除了这种正统意义上的排序算法，最近了解了几种令人啼笑皆非的排序算法，与大家分享一下。虽然这些算法都基本不可能用到生产环境，不过，平时拿出来恶搞一下还是比较有意思的。">
+<meta name="twitter:image" content="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/14/476167382.png">
+
+
+
+  <link rel="alternate" href="/atom.xml" title="xlzd 杂谈" type="application/atom+xml">
+
+
+
+
+  <link rel="canonical" href="https://xlzd.me/2016/07/07/sp-sort/">
+
+
+
+<script type="text/javascript" id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>几种无用但有趣的排序算法 | xlzd 杂谈</title>
+  
+
+
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-65835112-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-65835112-1');
+</script>
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?70df08067fbb3792c8ee0bc6eb269fd8";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style type="text/css">
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion {
+      .logo-line-before i { left: initial; }
+      .logo-line-after i { right: initial; }
+    }
+  </style>
+</noscript>
+
+
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-2933033769298120",
+    enable_page_level_ads: true
+  });
+</script>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">xlzd 杂谈</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <h1 class="site-subtitle" itemprop="description">blog of xlzd</h1>
+      
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+    <a href="/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+    <a href="/archives/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+    <a href="/tags/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+    <a href="/about/" rel="section">
+      <i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+  
+  
+  
+    
+      
+    
+    <a href="https://github.com/xlzd" class="github-corner" target="_blank" title="Follow me on GitHub" aria-label="Follow me on GitHub"><svg width="80" height="80" viewbox="0 0 250 250" style="fill:#222; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg>
+    
+      </a>
+    
+
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://xlzd.me/2016/07/07/sp-sort/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="xlzd">
+      <meta itemprop="description" content="blog of xlzd">
+      <meta itemprop="image" content="/images/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xlzd 杂谈">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">几种无用但有趣的排序算法
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2016-07-07 04:03:54" itemprop="dateCreated datePublished" datetime="2016-07-07T04:03:54+08:00">2016-07-07</time>
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>　　常见的排序算法——诸如快排、堆排或归并等——都是基于比较的，除了这种正统意义上的排序算法，最近了解了几种令人啼笑皆非的排序算法，与大家分享一下。虽然这些算法都基本不可能用到生产环境，不过，平时拿出来恶搞一下还是比较有意思的。</p>
+<p><img src="http://7xkpi6.com1.z0.glb.clouddn.com/blog/2016/03/14/476167382.png" alt="New sorted logo.png"></p>
+<a id="more"></a>
+<h3 id="意大利面条排序-Spaghetti-Sort"><a href="#意大利面条排序-Spaghetti-Sort" class="headerlink" title="意大利面条排序(Spaghetti Sort)"></a>意大利面条排序(Spaghetti Sort)</h3><p>　　意大利面条排序(Spaghetti Sort)的思路是，将输入分别对应到不同长度的面条上，每根面条的长度即为对应的数字的大小。比如，对于<code>[1, 4, 2, 8, 9]</code>这个输入，则分别做出长度为1cm、4cm、2cm、8cm、9cm的面条。然后，将这些面条的一头对其，用手抓住，另一头向下。然后慢慢地将手向下垂直下降，第一个触碰到桌面的面条对应的数字则为最大的数字，第二个触碰到的就是第二大的，依次类推。</p>
+<h3 id="睡眠排序-Sleep-Sort"><a href="#睡眠排序-Sleep-Sort" class="headerlink" title="睡眠排序(Sleep Sort)"></a>睡眠排序(Sleep Sort)</h3><p>　　睡眠排序(Sleep Sort)可以认为是意大利面条排序的计算机实现。它的算法思路是：对于输入数组<code>array</code>，开辟<code>array.length</code>个线程，对于数组中的每个元素，则对应一个线程，这个线程在睡眠所表示数字的长度之后，再将自己所对应的数字报出来即可。比如对于上面的输入<code>[1, 4, 2, 8, 9]</code>，则开辟5个线程，分别睡眠1s、4s、2s、8s、9s。这个算法虽然不太可能应用到真实开发中，不过却真的可以通过代码实现： </p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment"># encoding=utf-8</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> multiprocessing.dummy <span class="keyword">import</span> Pool <span class="keyword">as</span> ThreadPool</span><br><span class="line"><span class="keyword">from</span> time <span class="keyword">import</span> sleep</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">sleep_sort</span><span class="params">(array)</span>:</span></span><br><span class="line">    rst_list = []</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">task</span><span class="params">(n)</span>:</span></span><br><span class="line">        sleep(n / <span class="number">1000.</span>)</span><br><span class="line">        rst_list.append(n)</span><br><span class="line"></span><br><span class="line">    pool = ThreadPool(len(array))</span><br><span class="line">    pool.map(task, array)</span><br><span class="line">    pool.close()</span><br><span class="line">    pool.join()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> rst_list</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:</span><br><span class="line">    <span class="keyword">print</span> sleep_sort([<span class="number">10</span>, <span class="number">4</span>, <span class="number">7</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">5</span>, <span class="number">9</span>, <span class="number">8</span>, <span class="number">3</span>, <span class="number">6</span>])</span><br></pre></td></tr></table></figure>
+<h3 id="猴子排序-Bogo-Sort"><a href="#猴子排序-Bogo-Sort" class="headerlink" title="猴子排序(Bogo Sort)"></a>猴子排序(Bogo Sort)</h3><p>　　如下关于猴子排序(Bogo Sort)的描述摘自<a href="https://zh.wikipedia.org/wiki/Bogo%E6%8E%92%E5%BA%8F" target="_blank" rel="noopener">维基百科</a>：</p>
+<blockquote>
+<p>在计算机科学中，Bogo排序（Bogo-Sort）是个既不实用又原始的排序算法，其原理等同将一堆卡片抛起，落在桌上后检查卡片是否已整齐排列好，若非就再抛一次。其名字源自Quantum bogodynamics，又称bozo sort、blort sort或猴子排序（参见<a href="https://zh.wikipedia.org/wiki/%E7%84%A1%E9%99%90%E7%8C%B4%E5%AD%90%E5%AE%9A%E7%90%86" target="_blank" rel="noopener">无限猴子定理</a>）。</p>
+</blockquote>
+<p>　　所谓<em>无限猴子定理</em>，即是：让一只猴子在打字机上随机地按键，当按键时间达到无穷时，几乎必然能够打出任何给定的文字，比如莎士比亚的全套著作。</p>
+<p>　　猴子排序的Python实现如下：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> random <span class="keyword">import</span> shuffle</span><br><span class="line"><span class="keyword">from</span> itertools <span class="keyword">import</span> izip, tee</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">in_order</span><span class="params">(array)</span>:</span></span><br><span class="line">    it1, it2 = tee(array)</span><br><span class="line">    it2.next()</span><br><span class="line">    <span class="keyword">return</span> all(a&lt;=b <span class="keyword">for</span> a,b <span class="keyword">in</span> izip(it1, it2))</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">bogo_sort</span><span class="params">(array)</span>:</span></span><br><span class="line">    <span class="keyword">while</span> <span class="keyword">not</span> in_order(array):</span><br><span class="line">        shuffle(array)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:</span><br><span class="line">    <span class="keyword">print</span> bogo_sort([<span class="number">10</span>, <span class="number">4</span>, <span class="number">1</span>, <span class="number">5</span>, <span class="number">9</span>, <span class="number">8</span>, <span class="number">3</span>, <span class="number">6</span>])</span><br></pre></td></tr></table></figure></p>
+<p>　　如果传入的是已排序的数组，猴子排序可以直接返回结果。如果不是已排序的数组，猴子排序的平均时间复杂度为O(n*n!)，最优情况下只需要一次shuffle操作，但是最差情况下则需要无限久的时间。所以，这种排序算法，基本大家就在吹牛的时候说说就好了，写在代码里，基本上就是分分钟被打死的后果。</p>
+<h3 id="量子猴排-Quantum-Bogo-Sort"><a href="#量子猴排-Quantum-Bogo-Sort" class="headerlink" title="量子猴排(Quantum Bogo Sort)"></a>量子猴排(Quantum Bogo Sort)</h3><p>　　量子猴排(Quantum Bogo Sort)可以算是<u>概念上</u>对猴子排序的一种优化：洗牌的时候，使用量子化随机排列（quantumly randomized）。这样的话，我们在观测这组数之前，这组数的状态是叠加的，参见<a href="https://en.wikipedia.org/wiki/Schr%C3%B6dinger%27s_cat?oldformat=true" target="_blank" rel="noopener">Schrรถdinger’s cat</a>。通过这种量子化随机排列，我们划分出来了个平行宇宙。接下来，在某个宇宙A中，观测一下这组数，发现运气不好，没有排序好，那么我们就销毁掉这个宇宙。然后再看看其他宇宙的运气怎么样。终于，在一个宇宙Z中，发现刚好是排好序的数组。那么我们就保留这个宇宙。最后，没有被销毁的宇宙中，数组都是恰好一次被排好序的。</p>
+<p>　　量子猴排的时间复杂度是O(n)。</p>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>　　几种无用蛋疼但是有趣的排序算法~~~</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/nonsense/" rel="tag"># nonsense</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/05/30/ellipsis/" rel="next" title="优雅的 Python 之 Ellipsis">
+                <i class="fa fa-chevron-left"></i> 优雅的 Python 之 Ellipsis
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/08/22/compile-py/" rel="prev" title="从源码编译 Python">
+                从源码编译 Python <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/avatar.png" alt="xlzd">
+            
+              <p class="site-author-name" itemprop="name">xlzd</p>
+              <p class="site-description motion-element" itemprop="description">blog of xlzd</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">27</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">13</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+            <div class="links-of-author motion-element">
+              
+                <span class="links-of-author-item">
+                  <a href="https://github.com/xlzd" target="_blank" title="GitHub" rel="external nofollow"><i class="fa fa-fw fa-github"></i>GitHub</a>
+                  
+                </span>
+              
+                <span class="links-of-author-item">
+                  <a href="https://www.zhihu.com/people/xlzd" target="_blank" title="知乎" rel="external nofollow"><i class="fa fa-fw fa-globe"></i>知乎</a>
+                  
+                </span>
+              
+            </div>
+          
+
+          
+          
+            <div class="cc-license motion-element" itemprop="license">
+              <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" target="_blank" rel="external nofollow">
+                <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons">
+              </a>
+            </div>
+          
+
+          
+          
+
+          
+          <div class="motion-element">
+            <script type="text/javascript" src="//ra.revolvermaps.com/0/0/6.js?i=0q7scpwe1yy&amp;m=0&amp;c=ff0000&amp;cr1=ffffff&amp;f=lucida_console&amp;l=0" async="async"></script>
+          </div>
+          
+
+          
+            
+          
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#意大利面条排序-Spaghetti-Sort"><span class="nav-number">1.</span> <span class="nav-text">意大利面条排序(Spaghetti Sort)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#睡眠排序-Sleep-Sort"><span class="nav-number">2.</span> <span class="nav-text">睡眠排序(Sleep Sort)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#猴子排序-Bogo-Sort"><span class="nav-number">3.</span> <span class="nav-text">猴子排序(Bogo Sort)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#量子猴排-Quantum-Bogo-Sort"><span class="nav-number">4.</span> <span class="nav-text">量子猴排(Quantum Bogo Sort)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#小结"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 1926 – <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">xlzd</span>
+
+  
+
+  
+</div>
+
+
+  
+
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" rel="external nofollow" href="https://hexo.io">Hexo</a> </div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme – <a class="theme-link" target="_blank" rel="external nofollow" href="https://theme-next.org">NexT.Pisces</a></div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+	
+    
+
+    
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=6.4.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=6.4.1"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=6.4.1"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=6.4.1"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=6.4.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=6.4.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=6.4.1"></script>
+
+
+
+  
+
+  
+
+  
+    <script type="text/javascript">
+      var disqus_config = function () {
+        this.page.url = 'https://xlzd.me/2016/07/07/sp-sort/';
+        this.page.identifier = '2016/07/07/sp-sort/';
+        this.page.title = '几种无用但有趣的排序算法';
+        };
+      function loadComments () {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://xlzd.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      }
+      
+        loadComments();
+      
+    </script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
